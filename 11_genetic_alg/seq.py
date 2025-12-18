@@ -45,8 +45,6 @@ for i in range(1000):
 
 	# For some small fraction, the unfittest actually survives
 	winner[np.random.rand(2048) > 0.99] ^= 1
-
-	# Duplicate winners
 	x = np.where(winner[:, None], b, a)
 
 	#
@@ -76,12 +74,9 @@ for i in range(1000):
 	# Mutations (probabilistic)
 	#
 
-	#
-	# Just mutate everything
-	#
-
 	mask = np.random.rand(4096, 100) < 0.1
-	x += (2*np.random.rand(4096, 100)-1) * mask
+	decay = 1 - i/1000
+	x += (2*np.random.rand(4096, 100)-1) * mask * decay
 
 	history.append( np.min(objective(x)) )
 
