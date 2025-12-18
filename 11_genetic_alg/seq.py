@@ -56,13 +56,11 @@ for i in range(1000):
 	a = x[:1024]
 	b = x[1024:]
 
-	# Do it once
+	# Do it twice to create more creatures,
+	# have the two be opposites of each other
 	swap_map = np.random.rand(1024, 100) > 0.5
 	u = np.where(swap_map, b, a)
-
-	# Do it twice
-	swap_map = np.random.rand(1024, 100) > 0.5
-	v = np.where(swap_map, b, a)
+	v = np.where(swap_map, a, b)
 
 	x = np.vstack([x, u, v])
 
