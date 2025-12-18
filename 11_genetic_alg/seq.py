@@ -44,7 +44,7 @@ for i in range(1000):
 	winner = 0 + (u > v)
 
 	# For some small fraction, the unfittest actually survives
-	winner[np.random.rand(2048) > 0.8] ^= 1
+	winner[np.random.rand(2048) > 0.99] ^= 1
 
 	# Duplicate winners
 	x = np.where(winner[:, None], b, a)
