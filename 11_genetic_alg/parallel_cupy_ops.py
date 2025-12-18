@@ -51,45 +51,13 @@ __global__ void my_add(const float* a, const float* b, const float* u, const flo
 
 mutation_k = cp.RawKernel(r"""
 extern "C" {
-typedef unsigned long long uint64_t;
-
-// Fast xorshift128+ PRNG
-__device__ __forceinline__ uint64_t xorshift128plus(uint64_t* s0, uint64_t* s1) {
-    uint64_t x = *s0;
-    uint64_t y = *s1;
-    *s0 = y;
-    x ^= x << 23;
-    *s1 = x ^ y ^ (x >> 17) ^ (y >> 26);
-    return *s1 + y;
-}
-
-__device__ __forceinline__ float rand_float(uint64_t* s0, uint64_t* s1) {
-    // Convert to float in [0, 1)
-    return (xorshift128plus(s0, s1) >> 40) * (1.0f / 16777216.0f);
-}
-
-
-__global__ void my_add(float* z, double decay, unsigned long long seed) {
+__global__ void my_add(float* z, const float* p, const float* q, float decay) {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
 	int idx = y * 1000 + x;
 
-	// Initialize state from seed and thread index
-	uint64_t s0 = seed + idx * 2;
-	uint64_t s1 = seed + idx * 2 + 1;
-
-	// Warm up (optional, improves distribution)
-	xorshift128plus(&s0, &s1);
-
-
-	//curandState_t state;
-	//curand_init(42, idx, 0, &state);
-	//z[idx] = u[y] < v[y] && (curand_uniform(&state) < 0.99f) ? a[idx] : b[idx];
-
-	float r = rand_float(&s0, &s1);
-	if (r < 0.1f) {
-		float r2 = rand_float(&s0, &s1);
-		z[idx] += (2*r2 - 1)*decay;
+	if (p[idx] < 0.1f) {
+		z[idx] += (2*q[idx] - 1)*decay;
 	}
 }}
 """, "my_add")
@@ -150,9 +118,10 @@ def advance_island(x):
 
 	decay = 1 - i/1000
 
-	#mask = cp.random.rand(1024, 1000, dtype="float32") < 0.1
-	#x += (2*cp.random.rand(1024, 1000, dtype="float32")-1) * mask * decay
-	mutation_k((50, 32), (20, 32), (x, decay, i))
+	p = cp.random.rand(1024, 1000, dtype="float32")
+	q = cp.random.rand(1024, 1000, dtype="float32")
+
+	mutation_k((10, 128), (100, 8), (x, p, q, cp.float32(decay)))
 
 	return x
 
