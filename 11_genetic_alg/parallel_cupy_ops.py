@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cupy as cp
 
+from time import perf_counter
+
 np.random.seed(42)
 cp.random.seed(42)
 
@@ -65,7 +67,7 @@ def advance_island(x):
 	#
 
 	mask = cp.random.rand(1024, 1000) < 0.1
-	decay = 1 - i/4000
+	decay = 1 - i/1000
 	x += (2*cp.random.rand(1024, 1000)-1) * mask * decay
 
 	return x
@@ -83,9 +85,11 @@ log_b = []
 log_c = []
 log_d = []
 
+start = perf_counter()
+
 # 1000 iterations
 # 4 islands
-for i in range(4000):
+for i in range(1000):
 	print(i)
 
 	a = advance_island(a)
@@ -112,6 +116,10 @@ for i in range(4000):
 		b[:256] = pool[ 256: 512]
 		c[:256] = pool[ 512: 768]
 		d[:256] = pool[ 768:1024]
+
+elapsed = perf_counter() - start
+
+print(f"Elapsed: {elapsed:.1f}s")
 
 print("Best fitness", cp.min(objective(a)).get() )
 print("Best fitness", cp.min(objective(b)).get() )
