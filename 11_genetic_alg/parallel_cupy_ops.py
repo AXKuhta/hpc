@@ -48,6 +48,52 @@ __global__ void my_add(const float* a, const float* b, const float* u, const flo
 }}
 """, "my_add")
 
+
+mutation_k = cp.RawKernel(r"""
+extern "C" {
+typedef unsigned long long uint64_t;
+
+// Fast xorshift128+ PRNG
+__device__ __forceinline__ uint64_t xorshift128plus(uint64_t* s0, uint64_t* s1) {
+    uint64_t x = *s0;
+    uint64_t y = *s1;
+    *s0 = y;
+    x ^= x << 23;
+    *s1 = x ^ y ^ (x >> 17) ^ (y >> 26);
+    return *s1 + y;
+}
+
+__device__ __forceinline__ float rand_float(uint64_t* s0, uint64_t* s1) {
+    // Convert to float in [0, 1)
+    return (xorshift128plus(s0, s1) >> 40) * (1.0f / 16777216.0f);
+}
+
+
+__global__ void my_add(float* z, double decay, unsigned long long seed) {
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+	int idx = y * 1000 + x;
+
+	// Initialize state from seed and thread index
+	uint64_t s0 = seed + idx * 2;
+	uint64_t s1 = seed + idx * 2 + 1;
+
+	// Warm up (optional, improves distribution)
+	xorshift128plus(&s0, &s1);
+
+
+	//curandState_t state;
+	//curand_init(42, idx, 0, &state);
+	//z[idx] = u[y] < v[y] && (curand_uniform(&state) < 0.99f) ? a[idx] : b[idx];
+
+	float r = rand_float(&s0, &s1);
+	if (r < 0.1f) {
+		float r2 = rand_float(&s0, &s1);
+		z[idx] += (2*r2 - 1)*decay;
+	}
+}}
+""", "my_add")
+
 def objective(x):
 	return cp.sum(x*x - 10*cp.cos(2*cp.pi*x) + 10, -1)
 
@@ -61,7 +107,6 @@ def advance_island(x):
 	u = z[:512]
 	v = z[512:]
 
-	"""
 	# Winner should actually have index 0
 	# So compare u > v
 	winner = 0 + (u > v)
@@ -69,14 +114,15 @@ def advance_island(x):
 	# For some small fraction, the unfittest actually survives
 	winner[cp.random.rand(512, dtype="float32") > 0.99] ^= 1
 	x = cp.where(winner[:, None], b, a)
-	"""
 
+	"""
 	z = cp.zeros((512, 1000), dtype="float32")
 
 	# Try grid (1000, 512) block (1, 1) first
 	# after that increase block size in steps
 	selection_k((50, 16), (20, 32), (a, b, u, v, z))
 	x = z
+	"""
 
 	#
 	# Cross polination (probabilistic)
@@ -102,9 +148,11 @@ def advance_island(x):
 	# Mutations (probabilistic)
 	#
 
-	mask = cp.random.rand(1024, 1000, dtype="float32") < 0.1
 	decay = 1 - i/1000
-	x += (2*cp.random.rand(1024, 1000, dtype="float32")-1) * mask * decay
+
+	#mask = cp.random.rand(1024, 1000, dtype="float32") < 0.1
+	#x += (2*cp.random.rand(1024, 1000, dtype="float32")-1) * mask * decay
+	mutation_k((50, 32), (20, 32), (x, decay, i))
 
 	return x
 
