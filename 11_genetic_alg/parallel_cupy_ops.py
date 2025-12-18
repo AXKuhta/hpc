@@ -49,7 +49,7 @@ def advance_island(x):
 
 	# Do it twice to create more creatures,
 	# have the two be opposites of each other
-	swap_map = cp.random.rand(256, 100) > 0.5
+	swap_map = cp.random.rand(256, 1000) > 0.5
 	u = cp.where(swap_map, b, a)
 	v = cp.where(swap_map, a, b)
 
@@ -64,19 +64,19 @@ def advance_island(x):
 	# Mutations (probabilistic)
 	#
 
-	mask = cp.random.rand(1024, 100) < 0.1
-	decay = 1 - i/1000
-	x += (2*cp.random.rand(1024, 100)-1) * mask * decay
+	mask = cp.random.rand(1024, 1000) < 0.1
+	decay = 1 - i/4000
+	x += (2*cp.random.rand(1024, 1000)-1) * mask * decay
 
 	return x
 
 #
 # Init
 #
-a = 100*(2*cp.random.rand(1024, 100)-1)
-b = 100*(2*cp.random.rand(1024, 100)-1)
-c = 100*(2*cp.random.rand(1024, 100)-1)
-d = 100*(2*cp.random.rand(1024, 100)-1)
+a = 100*(2*cp.random.rand(1024, 1000)-1)
+b = 100*(2*cp.random.rand(1024, 1000)-1)
+c = 100*(2*cp.random.rand(1024, 1000)-1)
+d = 100*(2*cp.random.rand(1024, 1000)-1)
 
 log_a = []
 log_b = []
@@ -85,7 +85,7 @@ log_d = []
 
 # 1000 iterations
 # 4 islands
-for i in range(1000):
+for i in range(4000):
 	print(i)
 
 	a = advance_island(a)
@@ -118,8 +118,8 @@ print("Best fitness", cp.min(objective(b)).get() )
 print("Best fitness", cp.min(objective(c)).get() )
 print("Best fitness", cp.min(objective(d)).get() )
 
-plt.plot(log_a)
-plt.plot(log_b)
-plt.plot(log_c)
-plt.plot(log_d)
+plt.semilogy(log_a)
+plt.semilogy(log_b)
+plt.semilogy(log_c)
+plt.semilogy(log_d)
 plt.show()
