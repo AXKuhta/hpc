@@ -22,13 +22,31 @@ cp.random.seed(42)
 #
 
 objective_k = cp.ReductionKernel(
-	"T x",					# Input
-	"T y",					# Output
+	"float32 x",				# Input
+	"float32 y",				# Output
 	"x * x - 10*cos(2*M_PI*x) + 10",	# Map ( B = ... )
 	"a + b",				# Reduce ( A = ... )
 	"y = a",				# Fin expression of A
 	"0",					# Initial value of A
 )
+
+selection_k = cp.RawKernel(r"""
+#include <curand_kernel.h>
+
+extern "C" {
+__global__ void my_add(const float* a, const float* b, const float* u, const float* v, float* z) {
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+	int idx = y * 1000 + x;
+
+	// drop random selection flips they're too troublesome in custom kernel
+	//curandState_t state;
+	//curand_init(42, idx, 0, &state);
+	//z[idx] = u[y] < v[y] && (curand_uniform(&state) < 0.99f) ? a[idx] : b[idx];
+
+	z[idx] = u[y] < v[y] ? a[idx] : b[idx];
+}}
+""", "my_add")
 
 def objective(x):
 	return cp.sum(x*x - 10*cp.cos(2*cp.pi*x) + 10, -1)
@@ -43,6 +61,7 @@ def advance_island(x):
 	u = z[:512]
 	v = z[512:]
 
+	"""
 	# Winner should actually have index 0
 	# So compare u > v
 	winner = 0 + (u > v)
@@ -50,6 +69,14 @@ def advance_island(x):
 	# For some small fraction, the unfittest actually survives
 	winner[cp.random.rand(512, dtype="float32") > 0.99] ^= 1
 	x = cp.where(winner[:, None], b, a)
+	"""
+
+	z = cp.zeros((512, 1000), dtype="float32")
+
+	# Try grid (1000, 512) block (1, 1) first
+	# after that increase block size in steps
+	selection_k((50, 16), (20, 32), (a, b, u, v, z))
+	x = z
 
 	#
 	# Cross polination (probabilistic)
