@@ -21,6 +21,15 @@ cp.random.seed(42)
 # Fraction means island count
 #
 
+objective_k = cp.ReductionKernel(
+	"T x",					# Input
+	"T y",					# Output
+	"x * x - 10*cos(2*M_PI*x) + 10",	# Map ( B = ... )
+	"a + b",				# Reduce ( A = ... )
+	"y = a",				# Fin expression of A
+	"0",					# Initial value of A
+)
+
 def objective(x):
 	return cp.sum(x*x - 10*cp.cos(2*cp.pi*x) + 10, -1)
 
@@ -28,11 +37,11 @@ def advance_island(x):
 	#
 	# Selection
 	#
+	z = objective_k(x, axis=-1)
 	a = x[:512]
 	b = x[512:]
-
-	u = objective(a)
-	v = objective(b)
+	u = z[:512]
+	v = z[512:]
 
 	# Winner should actually have index 0
 	# So compare u > v
