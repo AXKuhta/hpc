@@ -48,26 +48,23 @@ for i in range(1000):
 
 	# Duplicate winners
 	x = np.where(winner[:, None], b, a)
-	x = np.vstack([x, x])
-
-	#print("Mean fitness", np.mean(objective(x)))
 
 	#
 	# Cross polination (probabilistic)
 	#
 
-	a = x[:2048]
-	b = x[2048:]
+	a = x[:1024]
+	b = x[1024:]
 
 	# Do it once
-	swap_map = np.random.rand(2048, 100) > 0.5
+	swap_map = np.random.rand(1024, 100) > 0.5
 	u = np.where(swap_map, b, a)
 
 	# Do it twice
-	swap_map = np.random.rand(2048, 100) > 0.5
+	swap_map = np.random.rand(1024, 100) > 0.5
 	v = np.where(swap_map, b, a)
 
-	x = np.vstack([u, v])
+	x = np.vstack([x, u, v])
 
 	#print("Mean fitness", np.mean(objective(x)))
 
