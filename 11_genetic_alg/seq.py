@@ -80,7 +80,8 @@ for i in range(1000):
 	# Just mutate everything
 	#
 
-	x += (2*np.random.rand(4096, 100)-1)
+	mask = np.random.rand(4096, 100) < 0.1
+	x += (2*np.random.rand(4096, 100)-1) * mask
 
 	history.append( np.min(objective(x)) )
 
