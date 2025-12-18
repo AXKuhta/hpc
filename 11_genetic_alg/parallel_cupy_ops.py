@@ -48,7 +48,7 @@ def advance_island(x):
 	winner = 0 + (u > v)
 
 	# For some small fraction, the unfittest actually survives
-	winner[cp.random.rand(512) > 0.99] ^= 1
+	winner[cp.random.rand(512, dtype="float32") > 0.99] ^= 1
 	x = cp.where(winner[:, None], b, a)
 
 	#
@@ -60,7 +60,7 @@ def advance_island(x):
 
 	# Do it twice to create more creatures,
 	# have the two be opposites of each other
-	swap_map = cp.random.rand(256, 1000) > 0.5
+	swap_map = cp.random.rand(256, 1000, dtype="float32") > 0.5
 	u = cp.where(swap_map, b, a)
 	v = cp.where(swap_map, a, b)
 
@@ -75,19 +75,19 @@ def advance_island(x):
 	# Mutations (probabilistic)
 	#
 
-	mask = cp.random.rand(1024, 1000) < 0.1
+	mask = cp.random.rand(1024, 1000, dtype="float32") < 0.1
 	decay = 1 - i/1000
-	x += (2*cp.random.rand(1024, 1000)-1) * mask * decay
+	x += (2*cp.random.rand(1024, 1000, dtype="float32")-1) * mask * decay
 
 	return x
 
 #
 # Init
 #
-a = 100*(2*cp.random.rand(1024, 1000)-1)
-b = 100*(2*cp.random.rand(1024, 1000)-1)
-c = 100*(2*cp.random.rand(1024, 1000)-1)
-d = 100*(2*cp.random.rand(1024, 1000)-1)
+a = 100*(2*cp.random.rand(1024, 1000, dtype="float32")-1)
+b = 100*(2*cp.random.rand(1024, 1000, dtype="float32")-1)
+c = 100*(2*cp.random.rand(1024, 1000, dtype="float32")-1)
+d = 100*(2*cp.random.rand(1024, 1000, dtype="float32")-1)
 
 log_a = []
 log_b = []
