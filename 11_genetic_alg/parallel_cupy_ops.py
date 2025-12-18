@@ -44,6 +44,25 @@ __global__ void my_add(float* z, const float* s, const float* r) {
 }}
 """, "my_add")
 
+crosspolination_k = cp.RawKernel(r"""
+extern "C" {
+__global__ void my_add(float* z, const float* r) {
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+	int idx_a = (y+  0) * 1000 + x; // Source 1
+	int idx_b = (y+256) * 1000 + x; // Source 2
+	int idx_c = (y+512) * 1000 + x; // Destination 1
+	int idx_d = (y+768) * 1000 + x; // Destination 2
+
+	if (r[idx_a] > 0.5) {
+		z[idx_c] = z[idx_a];
+		z[idx_d] = z[idx_b];
+	} else {
+		z[idx_c] = z[idx_b];
+		z[idx_d] = z[idx_a];
+	}
+}}
+""", "my_add")
 
 mutation_k = cp.RawKernel(r"""
 extern "C" {
@@ -77,18 +96,8 @@ def advance_island(x):
 	#
 	# Cross polination (probabilistic)
 	#
-
-	x = x[:512]
-	a = x[:256]
-	b = x[256:]
-
-	# Do it twice to create more creatures,
-	# have the two be opposites of each other
-	swap_map = cp.random.rand(256, 1000, dtype="float32") > 0.5
-	u = cp.where(swap_map, b, a)
-	v = cp.where(swap_map, a, b)
-
-	x = cp.vstack([x, u, v])
+	r = cp.random.rand(256, 1000, dtype="float32")
+	crosspolination_k((50, 8), (20, 32), (x, r))
 
 	#
 	# Shuffling
