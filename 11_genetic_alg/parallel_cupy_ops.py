@@ -31,20 +31,16 @@ objective_k = cp.ReductionKernel(
 )
 
 selection_k = cp.RawKernel(r"""
-#include <curand_kernel.h>
-
 extern "C" {
-__global__ void my_add(const float* a, const float* b, const float* u, const float* v, float* z) {
+__global__ void my_add(float* z, const float* s, const float* r) {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
-	int idx = y * 1000 + x;
+	int idx_top = y * 1000 + x;
+	int idx_bottom = (y+512) * 1000 + x;
 
-	// drop random selection flips they're too troublesome in custom kernel
-	//curandState_t state;
-	//curand_init(42, idx, 0, &state);
-	//z[idx] = u[y] < v[y] && (curand_uniform(&state) < 0.99f) ? a[idx] : b[idx];
-
-	z[idx] = u[y] < v[y] ? a[idx] : b[idx];
+	if (s[y] > s[y+512] && r[y] < 0.99) {
+		z[idx_top] = z[idx_bottom];
+	}
 }}
 """, "my_add")
 
@@ -70,32 +66,19 @@ def advance_island(x):
 	# Selection
 	#
 	z = objective_k(x, axis=-1)
-	a = x[:512]
-	b = x[512:]
-	u = z[:512]
-	v = z[512:]
 
-	# Winner should actually have index 0
-	# So compare u > v
-	winner = 0 + (u > v)
-
-	# For some small fraction, the unfittest actually survives
-	winner[cp.random.rand(512, dtype="float32") > 0.99] ^= 1
-	x = cp.where(winner[:, None], b, a)
-
-	"""
-	z = cp.zeros((512, 1000), dtype="float32")
-
-	# Try grid (1000, 512) block (1, 1) first
-	# after that increase block size in steps
-	selection_k((50, 16), (20, 32), (a, b, u, v, z))
-	x = z
-	"""
+	#
+	# We run a kernel for half of creatures
+	# Then we run a kernel for quarter of creatures
+	#
+	r = cp.random.rand(512, dtype="float32")
+	selection_k((50, 16), (20, 32), (x, z, r))
 
 	#
 	# Cross polination (probabilistic)
 	#
 
+	x = x[:512]
 	a = x[:256]
 	b = x[256:]
 
