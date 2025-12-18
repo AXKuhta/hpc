@@ -64,6 +64,11 @@ for i in range(1000):
 
 	x = np.vstack([x, u, v])
 
+	#
+	# Shuffling
+	#
+	np.random.shuffle(x)
+
 	#print("Mean fitness", np.mean(objective(x)))
 
 
