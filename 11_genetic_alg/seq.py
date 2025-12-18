@@ -2,6 +2,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+np.random.seed(42)
+
 #
 # Target function:
 # sum over i(x.i^2 - 10cos(2 pi x.i) + 10) -> min
@@ -80,7 +82,9 @@ for i in range(1000):
 
 	x += (2*np.random.rand(4096, 100)-1)
 
-	history.append( np.mean(objective(x)) )
+	history.append( np.min(objective(x)) )
+
+print("Best fitness", np.min(objective(x)))
 
 plt.plot(history)
 plt.show()
