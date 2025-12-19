@@ -91,13 +91,13 @@ def advance_island(x):
 	# Then we run a kernel for quarter of creatures
 	#
 	r = cp.random.rand(512, dtype="float32")
-	selection_k((50, 16), (20, 32), (x, z, r))
+	selection_k((40, 16), (25, 32), (x, z, r))
 
 	#
 	# Cross polination (probabilistic)
 	#
 	r = cp.random.rand(256, 1000, dtype="float32")
-	crosspolination_k((50, 8), (20, 32), (x, r))
+	crosspolination_k((40, 8), (25, 32), (x, r))
 
 	#
 	# Shuffling
@@ -142,10 +142,10 @@ for i in range(1000):
 	c = advance_island(c)
 	d = advance_island(d)
 
-	log_a.append( cp.min(objective(a)).get() )
-	log_b.append( cp.min(objective(b)).get() )
-	log_c.append( cp.min(objective(c)).get() )
-	log_d.append( cp.min(objective(d)).get() )
+	log_a.append( cp.min(objective_k(a)).get() )
+	log_b.append( cp.min(objective_k(b)).get() )
+	log_c.append( cp.min(objective_k(c)).get() )
+	log_d.append( cp.min(objective_k(d)).get() )
 
 	# Migration event
 	if i % 25 == 0:
