@@ -4,6 +4,7 @@ import numpy as np
 import cupy as cp
 
 from time import perf_counter
+import json
 
 np.random.seed(42)
 cp.random.seed(42)
@@ -80,6 +81,38 @@ __global__ void my_add(float* z, const float* p, const float* q, float decay) {
 def objective(x):
 	return cp.sum(x*x - 10*cp.cos(2*cp.pi*x) + 10, -1)
 
+# Problem size for one island
+size = np.array([1000, 1024])
+rect = (1000, 1)
+
+# Different options
+# 100, 8	800 threads
+# 50, 16	800 threads
+# 25, 32	800 threads
+# 10, 64	640 threads
+# 8, 128	1024 threads
+#
+# 125, 8	1000 threads
+#
+# 1, 32		32 threads
+# 1, 16		16 threads
+# 1, 8		8 threads
+# 1, 4		4 threads
+# 1, 2		2 threads
+# 1, 1		1 thread
+
+grid1 = size/rect/[1,2]
+grid2 = size/rect/[1,4]
+grid3 = size/rect
+
+assert np.all(np.int64(grid1) == grid1)
+assert np.all(np.int64(grid2) == grid2)
+assert np.all(np.int64(grid3) == grid3)
+
+grid1 = tuple(np.int64(grid1))
+grid2 = tuple(np.int64(grid2))
+grid3 = tuple(np.int64(grid3))
+
 def advance_island(x):
 	#
 	# Selection
@@ -91,13 +124,13 @@ def advance_island(x):
 	# Then we run a kernel for quarter of creatures
 	#
 	r = cp.random.rand(512, dtype="float32")
-	selection_k((40, 16), (25, 32), (x, z, r))
+	selection_k(grid1, rect, (x, z, r))
 
 	#
 	# Cross polination (probabilistic)
 	#
 	r = cp.random.rand(256, 1000, dtype="float32")
-	crosspolination_k((40, 8), (25, 32), (x, r))
+	crosspolination_k(grid2, rect, (x, r))
 
 	#
 	# Shuffling
@@ -113,7 +146,7 @@ def advance_island(x):
 	p = cp.random.rand(1024, 1000, dtype="float32")
 	q = cp.random.rand(1024, 1000, dtype="float32")
 
-	mutation_k((10, 128), (100, 8), (x, p, q, cp.float32(decay)))
+	mutation_k(grid3, rect, (x, p, q, cp.float32(decay)))
 
 	return x
 
@@ -142,10 +175,10 @@ for i in range(1000):
 	c = advance_island(c)
 	d = advance_island(d)
 
-	log_a.append( cp.min(objective_k(a)).get() )
-	log_b.append( cp.min(objective_k(b)).get() )
-	log_c.append( cp.min(objective_k(c)).get() )
-	log_d.append( cp.min(objective_k(d)).get() )
+	log_a.append( float(cp.min(objective_k(a)).get()) )
+	log_b.append( float(cp.min(objective_k(b)).get()) )
+	log_c.append( float(cp.min(objective_k(c)).get()) )
+	log_d.append( float(cp.min(objective_k(d)).get()) )
 
 	# Migration event
 	if i % 25 == 0:
@@ -170,6 +203,18 @@ print("Best fitness", cp.min(objective(a)).get() )
 print("Best fitness", cp.min(objective(b)).get() )
 print("Best fitness", cp.min(objective(c)).get() )
 print("Best fitness", cp.min(objective(d)).get() )
+
+report = {
+	"blockdim": rect,
+	"elapsed": elapsed,
+	"log_a": log_a,
+	"log_b": log_b,
+	"log_c": log_c,
+	"log_d": log_d,
+}
+
+with open("results.jsonl", "a") as f:
+	f.write(json.dumps(report))
 
 plt.semilogy(log_a)
 plt.semilogy(log_b)
