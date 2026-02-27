@@ -1,3 +1,7 @@
+
+from scipy.spatial import Voronoi
+import matplotlib.pyplot as plt
+
 import numpy as np
 import cupy as cp
 
@@ -6,6 +10,41 @@ from time import perf_counter
 np.random.seed(42)
 cp.random.seed(42)
 
+#
+# Делаем случайные точки на плоскости
+#
+n = 100
+x = np.random.randint(1, 10000, n)/100
+y = np.random.randint(1, 10000, n)/100
+
+pts = np.dstack([x, y])[0]
+vor = Voronoi(pts)
+
+vor_ridges = list(filter(lambda x: -1 not in x, vor.ridge_vertices))
+
+# Находим расстояния
+x = vor.vertices.T[0]
+y = vor.vertices.T[1]
+dx = x - x[:, None]
+dy = y - y[:, None]
+l2 = np.round(np.sqrt(dx*dx + dy*dy))
+
+v_ = np.array(vor_ridges).T
+l2_ = np.ones_like(l2)*99999
+l2_[v_[0], v_[1]] = l2[v_[0], v_[1]]
+l2_[v_[1], v_[0]] = l2[v_[0], v_[1]]
+
+asd = l2_[v_[0], v_[1]].tolist()
+for z in vor.vertices[vor_ridges]: plt.plot(*z.T, c="orange"); plt.annotate(f"{asd.pop(0)}", np.mean(z.T, 1), color="slategray", fontweight="bold")
+plt.scatter(*vor.vertices.T, c="orange")
+plt.scatter(*pts.T)
+plt.xlim(1, 100)
+plt.ylim(1, 100)
+plt.show()
+
+l2 = l2_
+
+"""
 n = 4
 
 # В этой матрице есть дешевый путь от 3 к 0:
@@ -18,6 +57,7 @@ ptmatrix = np.array([
 ])
 
 l2 = ptmatrix
+"""
 
 def cost(path):
 	return l2[path[:-1], path[1:]].sum()
@@ -115,5 +155,5 @@ def impl3():
 res2 = impl2()
 res3 = impl3()
 
-x = path(3, 0, res2[3, 0])
+path(5, 0, res2[5, 0])
 print(x)
