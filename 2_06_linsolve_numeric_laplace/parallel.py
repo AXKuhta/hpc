@@ -106,7 +106,7 @@ def conjugate_gradient_lstsq(A_, b_, eps=0.01):
 
 	# Initial guess
 	# WARNING: Avoid using random here, it will create junk in dead parameters of ill-conditioned systems
-	x = cp.zeros(n)
+	x = cp.zeros(n, dtype="float32")
 	z = cp.zeros_like(x)
 
 	r = b - A@x

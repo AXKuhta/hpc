@@ -108,7 +108,7 @@ def conjugate_gradient_lstsq(A_, b_, eps=0.01):
 
 	# Initial guess
 	# WARNING: Avoid using random here, it will create junk in dead parameters of ill-conditioned systems
-	x = np.zeros(n)
+	x = np.zeros(n, dtype="float32")
 	z = np.zeros_like(x)
 
 	r = b - A@x
@@ -201,10 +201,10 @@ def simulate_v2(ics, metal=None, tau=99):
 benchmarks = dict(
 	x=["32x32", "48x48", "64x64", "96x96"],
 	y_lstsq=[
-		simulate_v1(b[:32, :32], tau=1),
-		simulate_v1(b[:48, :48], tau=1),
-		simulate_v1(b[:64, :64], tau=1),
-		simulate_v1(b[:96, :96], tau=1)
+	#	simulate_v1(b[:32, :32], tau=1),
+	#	simulate_v1(b[:48, :48], tau=1),
+	#	simulate_v1(b[:64, :64], tau=1),
+	#	simulate_v1(b[:96, :96], tau=1)
 	],
 	y_cg=[
 		simulate_v2(b[:32, :32], tau=1),
