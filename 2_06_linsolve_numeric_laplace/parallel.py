@@ -141,7 +141,8 @@ def conjugate_gradient_lstsq(A_, b_, eps=0.01):
 
 	return x, elapsed
 
-def simulate_v2(ics, metal=None, tau=99):
+# simulate_v2(a*9999999, board[:64, :64], tau=30, impulse=False)
+def simulate_v2(ics, metal=None, impulse=True, tau=99):
 	h, w = ics.shape
 	n = w
 
@@ -168,6 +169,10 @@ def simulate_v2(ics, metal=None, tau=99):
 
 	b = ics.flatten()
 
+	if not impulse:
+		A[cp.argwhere(b), :] = 0
+		A[cp.argwhere(b), cp.argwhere(b)] = -1
+
 	# Metal cutouts if metal zone specified
 	if metal is not None:
 		ind = cp.argwhere(metal.flatten() == 0)
@@ -184,6 +189,6 @@ def simulate_v2(ics, metal=None, tau=99):
 	print(f"Elapsed: {elapsed*1000:.1f}ms")
 
 	#plt.imshow(metal, alpha=0.5)
-	#plt.imshow(x.reshape(64, 64))
+	#plt.imshow(x.get().reshape(64, 64))
 	plt.imshow(np.log10(np.abs(x.get().reshape(64, 64) + 0.0001)))
 	plt.show()
