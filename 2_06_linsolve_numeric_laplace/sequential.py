@@ -3,6 +3,8 @@ from time import perf_counter
 import matplotlib.pyplot as plt
 import numpy as np
 
+import json
+
 # Heating map
 # Initial conditions must be enforced throughout
 x_ = np.array([
@@ -31,7 +33,7 @@ b = np.zeros([128, 128], dtype="float32")
 h, w = x_.shape
 
 a[30:30+h, 30:30+w] = x_
-b[60:60+h, 60:60+w] = x_
+b[10:10+h, 10:10+w] = x_
 
 board = np.loadtxt("board128x128.csv")
 
@@ -90,9 +92,11 @@ def simulate_v1(ics, metal=None, tau=99):
 	print(f"Elapsed: {elapsed*1000:.1f}ms")
 
 	#plt.imshow(metal, alpha=0.5)
-	#plt.imshow(x.reshape(64, 64), alpha=0.5)
-	plt.imshow(np.log10(np.abs(x.reshape(64, 64) + 0.0001)))
+	plt.imshow(x.reshape(h, w))
+	#plt.imshow(np.log10(np.abs(x.reshape(h, w) + 0.0001)))
 	plt.show()
+
+	return elapsed
 
 def conjugate_gradient_lstsq(A_, b_, eps=0.01):
 	A = A_.T @ A_ # Problem needs to be least squares
@@ -187,6 +191,28 @@ def simulate_v2(ics, metal=None, tau=99):
 	print(f"Elapsed: {elapsed*1000:.1f}ms")
 
 	#plt.imshow(metal, alpha=0.5)
-	#plt.imshow(x.reshape(64, 64))
-	plt.imshow(np.log10(np.abs(x.reshape(64, 64) + 0.0001)))
+	plt.imshow(x.reshape(h, w))
+	#plt.imshow(np.log10(np.abs(x.reshape(h, w) + 0.0001)))
 	plt.show()
+
+	return elapsed
+
+
+benchmarks = dict(
+	x=["32x32", "48x48", "64x64", "96x96"],
+	y_lstsq=[
+		simulate_v1(b[:32, :32], tau=1),
+		simulate_v1(b[:48, :48], tau=1),
+		simulate_v1(b[:64, :64], tau=1),
+		simulate_v1(b[:96, :96], tau=1)
+	],
+	y_cg=[
+		simulate_v2(b[:32, :32], tau=1),
+		simulate_v2(b[:48, :48], tau=1),
+		simulate_v2(b[:64, :64], tau=1),
+		simulate_v2(b[:96, :96], tau=1)
+	]
+)
+
+with open("results_sequential.json", "w") as f:
+	json.dump(benchmarks, f)

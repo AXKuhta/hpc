@@ -1,4 +1,5 @@
 from time import perf_counter
+import json
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -32,7 +33,7 @@ b = cp.zeros([128, 128], dtype="float32")
 h, w = x_.shape
 
 a[30:30+h, 30:30+w] = x_
-b[60:60+h, 60:60+w] = x_
+b[10:10+h, 10:10+w] = x_
 
 board = cp.array(np.loadtxt("board128x128.csv"))
 
@@ -89,9 +90,11 @@ def simulate_v1(ics, metal=None, tau=99):
 	print(f"Elapsed: {elapsed*1000:.1f}ms")
 
 	#plt.imshow(metal, alpha=0.5)
-	plt.imshow(x.get().reshape(64, 64))
-	#plt.imshow(np.log10(np.abs(x.get().reshape(64, 64) + 0.0001)))
+	plt.imshow(x.get().reshape(h, w))
+	#plt.imshow(np.log10(np.abs(x.get().reshape(h, w) + 0.0001)))
 	plt.show()
+
+	return elapsed
 
 def conjugate_gradient_lstsq(A_, b_, eps=0.01):
 	A = A_.T @ A_ # Problem needs to be least squares
@@ -180,15 +183,36 @@ def simulate_v2(ics, metal=None, impulse=True, tau=99):
 		A[:, ind] = 0
 		b[ind] = 0
 
+	cp.cuda.Stream.null.synchronize()
+
 	start = perf_counter()
 
 	x, _ = conjugate_gradient_lstsq(A, -b, eps=0.001)
+
+	cp.cuda.Stream.null.synchronize()
 
 	elapsed = perf_counter() - start
 
 	print(f"Elapsed: {elapsed*1000:.1f}ms")
 
 	#plt.imshow(metal, alpha=0.5)
-	#plt.imshow(x.get().reshape(64, 64))
-	plt.imshow(np.log10(np.abs(x.get().reshape(64, 64) + 0.0001)))
+	plt.imshow(x.get().reshape(h, w))
+	#plt.imshow(np.log10(np.abs(x.get().reshape(h, w) + 0.0001)))
 	plt.show()
+
+	return elapsed
+
+simulate_v2(b[:32, :32], tau=1)
+
+benchmarks = dict(
+	x=["32x32", "48x48", "64x64", "96x96"],
+	y=[
+		simulate_v2(b[:32, :32], tau=1),
+		simulate_v2(b[:48, :48], tau=1),
+		simulate_v2(b[:64, :64], tau=1),
+		simulate_v2(b[:96, :96], tau=1)
+	]
+)
+
+with open("results_parallel.json", "w") as f:
+	json.dump(benchmarks, f)
